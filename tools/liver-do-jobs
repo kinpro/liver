@@ -15,8 +15,10 @@ from urllib import urlencode
 from optparse import OptionParser
 from subprocess import Popen, PIPE
 from slugify import slugify
+from threading import Thread
 import ConfigParser
 import simplejson as json
+
 
 
 def get_http_requester():
