@@ -1,0 +1,97 @@
+#!/usr/bin/python
+# -*- coding:utf-8 -*-
+
+# Author: Pablo Saavedra Rodinho
+# Contact: pablo.saavedra@interoud.com
+
+import os
+import sys
+import time
+import imp
+import pytz
+import datetime
+
+reload(sys)
+sys.setdefaultencoding('utf-8')
+print sys.getdefaultencoding()
+
+from django.core.management import setup_environ
+
+try:
+    imp.find_module('settings') # Assumed to be in the same directory.
+except ImportError:
+    import sys
+    sys.stderr.write('''Error: Can't find the file 'settings.py' in the
+    directory containing %r. It appears you've customized things.\n
+    You'll have to run django-admin.py, passing it your settings
+    module.\n''' % __file__)
+    sys.exit(1)
+
+import settings
+
+setup_environ(settings)
+
+from optparse import OptionParser
+import asm
+import logging
+logger = logging.getLogger("asm.views")
+
+unpublishedonly=False
+keepbackdays=7
+
+parser = OptionParser()
+parser.add_option("-u", "--username", dest="username", default=None,
+        help="Username to fix the permissions ", metavar="USERNAME")
+parser.add_option("-k", "--keepbackdays", dest="days",
+        help="Days to keep back (default: %s)" % keepbackdays, metavar="DAYS",
+                  default=keepbackdays)
+parser.add_option("--unpublishedonly",
+        dest="unpublishedonly", help="Delete assets  (default: %s)" \
+        % unpublishedonly,
+        action="store_true",
+        default=unpublishedonly)
+
+(options, args) = parser.parse_args()
+
+now_milliseconds = int(time.time())
+millisecons_of_week = int(options.days) * 24 * 60 * 60
+oldest_time=now_milliseconds-millisecons_of_week
+oldest_date=datetime.datetime.fromtimestamp(oldest_time,pytz.UTC)
+unpublishedonly = options.unpublishedonly
+
+try:
+    user = asm.models.ASM_User.objects.filter(username=options.username)[0]
+except Exception,e:
+    logger.error("No user found: %s" % e)
+    sys.exit(-1)
+
+org_user_list = asm.models.ASM_OrgUser.objects.filter(enable=True,user=user)
+
+if len(org_user_list)==0:
+    logger.error("No organizations available")
+    sys.exit(-1)
+
+for ou in org_user_list:
+    del_asset_id = asm.utils.helpers.get_deleteable_assets_ids(ou)
+    for i in del_asset_id:
+        try:
+            asset = asm.models.ASM_Asset.objects.get(id=i)
+            if asset.modification_date < oldest_date:
+                if unpublishedonly:
+                    if not asset.is_profile and asm.utils.helpers.is_unpublished_asset(asset):
+                        logger.info ( "Deleting unpublished asset %s: [name:%s, uri:%s, external: %s]" \
+                  % (asset.id, asset.name, asset.uri, asset.external))
+                        asm.utils.helpers.delete_asset(asset)
+                    else:
+                        # print "no delete"
+                        pass
+                else:
+                    logger.info ( "Deleting asset %s: [name:%s, uri:%s, external: %s]" \
+                      % (asset.id, asset.name, asset.uri, asset.external))
+                    asm.utils.helpers.delete_asset(asset)
+            else:
+                # print "no delete"
+                pass
+        except Exception, e:
+            logger.error( "Error deleting asset: %s" % e)
+            pass

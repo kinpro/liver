@@ -1,14 +1,14 @@
 from django.db import models
-import uuid
-import pytz
-from django.utils.translation import ugettext_lazy, ugettext as _
-import datetime, time, pytz
 from django.template.defaultfilters import slugify
+from django.utils.translation import ugettext_lazy, ugettext as _
 
-class Source(models.Model):
+import datetime, time, pytz, calendar
+import simplejson as json
+import uuid
+
+class SourcesGroup(models.Model):
     name = models.CharField(max_length=5000,verbose_name="Common Name")
     external_id = models.CharField(max_length=5000,verbose_name="External Id.")
-    uri = models.CharField(max_length=5000,verbose_name="URI")
 
     insertion_date = models.DateTimeField(editable=False)
     modification_date = models.DateTimeField(auto_now=True,
@@ -21,6 +21,53 @@ class Source(models.Model):
             verbose_name="Default availability window (in hours)")
 
     def clone(self):
+        sg = SourcesGroup()
+        if self.name and self.name.find(" (Clone") >= 0:
+            sg.name = self.name[:self.name.find(" (Clone")] \
+                    + " (Clone %s)" % int(time.time())
+        else:
+            sg.name = self.name + " (Clone %s)" % int(time.time())
+        sg.external_id = self.external_id
+        sg.default_offset_start = self.default_offset_start
+        sg.default_offset_end = self.default_offset_end
+        sg.default_availability_window = self.default_availability_window
+
+        sg.save()
+
+        for s in self.source_set.all():
+            s_clone = s.clone()
+            s_clone.sources_group = sg
+            s_clone.save()
+
+        return sg
+
+    def save(self, *args, **kwargs):
+        if not self.insertion_date:
+            d = datetime.datetime.fromtimestamp(time.time(), pytz.UTC)
+            self.insertion_date = d
+        super(SourcesGroup, self).save(*args, **kwargs)
+
+    def __repr__(self):
+        return self.__unicode__()
+
+    def __unicode__(self):
+        return u"%s [%s]" % (slugify(self.name),
+                self.external_id)
+
+
+
+class Source(models.Model):
+    name = models.CharField(max_length=5000,verbose_name="Common Name")
+    external_id = models.CharField(max_length=5000,verbose_name="External Id.")
+    uri = models.CharField(max_length=5000,verbose_name="URI")
+
+    insertion_date = models.DateTimeField(editable=False)
+    modification_date = models.DateTimeField(auto_now=True,
+            auto_now_add=True, blank=True, null=True)
+
+    sources_group = models.ForeignKey(SourcesGroup, null=True, blank=True)
+
+    def clone(self):
         s = Source()
         if self.name and self.name.find(" (Clone") >= 0:
             s.name = self.name[:self.name.find(" (Clone")] \
@@ -29,9 +76,6 @@ class Source(models.Model):
             s.name = self.name + " (Clone %s)" % int(time.time())
         s.external_id = self.external_id
         s.uri = self.uri
-        s.default_offset_start = self.default_offset_start
-        s.default_offset_end = self.default_offset_end
-        s.default_availability_window = self.default_availability_window
         s.save()
         return s
 
@@ -70,7 +114,7 @@ class Recorder(models.Model):
         return "%s [%s]" % (self.name, self.token)
 
 class RecordSource(models.Model):
-    source = models.ForeignKey(Source, null=True, blank=True)
+    sources_group = models.ForeignKey(SourcesGroup, null=True, blank=True)
 
     insertion_date = models.DateTimeField(editable=False)
     modification_date = models.DateTimeField(auto_now=True,
@@ -82,7 +126,7 @@ class RecordSource(models.Model):
 
     def clone(self):
         rs = RecordSource()
-        rs.source = self.source
+        rs.sources_group = self.sources_group
         rs.enabled = False
         rs.enabled_since = self.enabled_since
         rs.enabled_until = self.enabled_until
@@ -109,7 +153,7 @@ class RecordSource(models.Model):
         return self.__unicode__()
 
     def __unicode__(self):
-        return "Record %s" % (unicode(self.source))
+        return "Record %s" % (unicode(self.sources_group))
 
 
 class RecordMetadata(models.Model):
@@ -184,7 +228,7 @@ class RecordJob(models.Model):
     record_source = models.ForeignKey(RecordSource, null=True, blank=True,
                         on_delete=models.SET_NULL)
 
-    source = models.ForeignKey(Source)
+    sources_group = models.ForeignKey(SourcesGroup)
 
     insertion_date = models.DateTimeField(editable=False)
     modification_date = models.DateTimeField(auto_now=True,
@@ -196,21 +240,27 @@ class RecordJob(models.Model):
     scheduled_duration = models.IntegerField(
             verbose_name="Scheduled duration (in seconds)")
 
-    enabled = models.BooleanField(default=False)
+    enabled = models.BooleanField(default=True)
 
     recorder =  models.ForeignKey(Recorder, null=True, blank=True,
             on_delete=models.SET_NULL)
 
     result = models.CharField(max_length=5000, blank=True, null=True,
             verbose_name=_('Result'),default="None")
-    status =  models.CharField(max_length=5000,
+    status = models.CharField(max_length=5000,
             verbose_name=_('Status'),
             choices=status_choices)
+
+    def get_scheduled_start_timestamp(self):
+        return calendar.timegm(
+            self.scheduled_start_date.astimezone(
+                pytz.utc).utctimetuple())
+    scheduled_start_timestamp = property(get_scheduled_start_timestamp)
 
     def clone(self):
         rj = RecordJob()
         rj.record_source = self.record_source
-        rj.source = self.source
+        rj.sources_group = self.sources_group
         rj.scheduled_start_date = self.scheduled_start_date
         rj.scheduled_duration = self.scheduled_duration
         rj.enabled = self.enabled
@@ -233,7 +283,7 @@ class RecordJob(models.Model):
 
     def __unicode__(self):
         return "%s [start:%s, duration:%s]" \
-    % (self.source,
+    % (self.sources_group,
        self.scheduled_start_date,
        self.scheduled_duration)
 
@@ -258,5 +308,83 @@ class RecordJobMetadata(models.Model):
 
     def __unicode__(self):
         return "%s - %s" % (self.key, self.value)
+
+
+class Record(models.Model):
+    record_job = models.ForeignKey(RecordJob, on_delete=models.SET_NULL,
+            null=True, blank=True,
+            verbose_name="Associated record job")
+
+    name = models.CharField(max_length=5000,blank=True,editable=False)
+
+    insertion_date = models.DateTimeField(editable=False)
+    modification_date = models.DateTimeField(auto_now=True,
+            auto_now_add=True, blank=True, null=True)
+
+    metadata_json = models.TextField(max_length=5000,blank=True,editable=False) # json
+    def get_metadata(self):
+        try:
+          res = ""
+          m_list = json.loads(self.metadata_json)
+          for m in m_list:
+              res +=\
+"%s:%s\n" % (m.keys()[0], m.values()[0])
+        except Exception:
+          res = self.metadata_json
+        return res
+    metadata = property(get_metadata)
+
+    profiles_json = models.TextField(max_length=5000,blank=True,editable=False) # json
+    def get_profiles(self):
+        try:
+          res = ""
+          p_list = json.loads(self.profiles_json)
+          for p in p_list:
+              res +=\
+"uri:%(uri)s file:%(destination)s\n"  % p
+
+        except Exception:
+          res = self.profiles_json
+        return res
+    profiles = property(get_profiles)
+
+    to_delete = models.BooleanField(default=False)
+
+    def save(self, *args, **kwargs):
+        if not self.insertion_date:
+            d = datetime.datetime.fromtimestamp(time.time(), pytz.UTC)
+            self.insertion_date = d
+        # TODO: Implementar la logica que decide si el flag to_delete se
+        # activa o no
+        super(Record, self).save(*args, **kwargs)
+
+    def delete(self, using=None):
+        if self.to_delete:
+            return super(Record, self).delete()
+        else:
+            self.to_delete = True
+            self.save()
+
+    def clone(self):
+        r = Record()
+        if self.name and self.name.find(" (Clone") >= 0:
+            r.name = self.name[:self.name.find(" (Clone")] \
+                    + " (Clone %s)" % int(time.time())
+        else:
+            r.name = self.name + " (Clone %s)" % int(time.time())
+
+        r.metadata_json = self.metadata_json
+        r.profiles_json = self.profiles_json
+        r.record_job = self.record_job
+        r.save()
+        return r
+
+    def __repr__(self):
+        return self.__unicode__()
+
+    def __unicode__(self):
+        return "%s" % (self.name)
+
+
 
 
