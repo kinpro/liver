@@ -170,8 +170,15 @@ def api_external_notify_worker_jobs_result(request):
 
     submitted_jobs_result = request.body
     logger.debug("worker jobs result received: %s" % submitted_jobs_result)
-    
-    job_result_dict = json.loads(submitted_jobs_result)
+
+    try:
+      job_result_dict = json.loads(submitted_jobs_result)
+    except ValueError:
+        res = {}
+        c,m = return_error (-400)
+        res["result"] = c
+        res["response"] = m
+        return json_response(res)
 
     # >>> d['jobs']['2'].keys()
     # ['name','duration', 'start', 'id', 'profiles', 'result']

@@ -114,6 +114,8 @@ class Recorder(models.Model):
         return "%s [%s]" % (self.name, self.token)
 
 class RecordSource(models.Model):
+    external_id = models.CharField(max_length=5000,verbose_name="External Id.",
+            default = "")
     sources_group = models.ForeignKey(SourcesGroup, null=True, blank=True)
 
     insertion_date = models.DateTimeField(editable=False)
@@ -126,6 +128,7 @@ class RecordSource(models.Model):
 
     def clone(self):
         rs = RecordSource()
+        rs.external_id = self.external_id
         rs.sources_group = self.sources_group
         rs.enabled = False
         rs.enabled_since = self.enabled_since
