@@ -317,6 +317,9 @@ class Record(models.Model):
     record_job = models.ForeignKey(RecordJob, on_delete=models.SET_NULL,
             null=True, blank=True,
             verbose_name="Associated record job")
+    recorder = models.ForeignKey(Recorder, on_delete=models.SET_NULL,
+            null=True, blank=True,
+            verbose_name="Associated recorder")
 
     name = models.CharField(max_length=5000,blank=True,editable=False)
 

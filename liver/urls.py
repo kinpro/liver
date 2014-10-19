@@ -9,5 +9,9 @@ urlpatterns = patterns('liver.views',
         (r'^api/external/notify_worker_jobs_result$',
         'api_external_notify_worker_jobs_result',
         None, 'api-external-notify-worker-jobs-result'),
+        ( r'^api/external/get_mo_to_delete$',
+        'api_external_get_mo_to_delete',
+        None, "api_external_get_mo_to_delete"),
+
 
 )

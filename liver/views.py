@@ -200,6 +200,7 @@ def api_external_notify_worker_jobs_result(request):
 
             r = Record()
             r.record_job=job
+            r.recorder=job.recorder
             r.name="%(name)s-%(start)s-%(duration)s" % (job_dict)
             r.profiles_json=json.dumps(job_dict['profiles'])
             metadata_list = []
@@ -227,4 +228,47 @@ def api_external_notify_worker_jobs_result(request):
             "response": "Job status updated"
     }
     return json_response(res)
+
+
+@get_token
+@transaction.commit_on_success
+def api_external_get_mo_to_delete(request):
+    try:
+        res = {
+          "result": 0,
+          "response": ""
+        }
+
+        token = request.token
+
+        try:
+            recorder = \
+                Recorder.objects.filter(token=token)[0]
+        except Exception:
+            logger.error("No recorder associated to this token: %s" % token)
+            result,response = return_error(-403)
+            res["result"]=result
+            res["response"]=response
+            return json_response(res)
+
+        records_to_delete_list = Record.objects\
+            .filter(to_delete=True).iterator()
+
+        response = []
+        for r in records_to_delete_list:
+            try:
+                profiles = json.loads(r.profiles_json)
+                for p in profiles:
+                    response.append(p["file"])
+                r.delete()
+            except Exception as e:
+                pass
+        res["response"]=response
+        return json_response(res)
+
+    except Exception as e:
+      res["result"] = -9
+      res["response"] = "Unexpected error: %s" % str(e)
+      return json_response(res)
+
 
