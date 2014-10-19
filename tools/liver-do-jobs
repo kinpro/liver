@@ -79,18 +79,17 @@ loglevel = options.loglevel
 
 class ffmpegRunner(Thread):
 
-    def __init__ (self,name,ffmpeg_params):
+    def __init__ (self,ffmpeg_params):
         Thread.__init__(self)
-        self.name = name
+        self.name = ffmpeg_params["name"]
         self.ffmpeg = None
         self.ffmpeg_params = ffmpeg_params
-        self.result = 0
 
     def run (self):
         logger.info("starting ffmpeg thread for %s stream: %s" \
                 % (self.name,self.ffmpeg_params))
 
-        cmd = "/usr/bin/avconv -y -i %(source)s -t %(duration)s -vcodec copy -acodec copy %(destination)s" % self.ffmpeg_params
+        cmd = "/usr/bin/avconv -y -i %(uri)s -t %(duration)s -vcodec copy -acodec copy %(destination)s" % self.ffmpeg_params
         logger.debug("cmd: %s" % cmd)
         self.ffmpeg = subprocess.Popen(cmd.split(), shell=False, bufsize=1024,
                 stdin=subprocess.PIPE, stdout=DEV_NULL,
@@ -101,7 +100,7 @@ class ffmpegRunner(Thread):
         p.wait()
         logger.info("ending ffmpeg for %s stream (%s)"
                 % (self.name,str(p.pid)))
-        self.result = p.returncode
+        self.ffmpeg_params["result"] = p.returncode
 
         cmd = "/usr/local/bin/qtfaststart %(destination)s" % self.ffmpeg_params
         logger.debug("cmd: %s" % cmd)
@@ -171,7 +170,7 @@ while True:
         if j_content['result'] == 0:
             logger.info( "Parsing and doing jobs")
             for job_dict in json_response.values():
-                all_ok = True
+                job_dict['result']=0
                 job_id=job_dict['id']
                 job_start=job_dict['start']
                 job_duration=job_dict['duration']
@@ -179,35 +178,45 @@ while True:
                 for p in profiles:
                     # p['id']
                     # p['uri']
-                    params={}
+                    params=p
+                    params["job_id"]=job_id
+                    params["job_start"]=job_start
+                    params["job_duration"]=job_duration
                     params["name"]=\
                       slugify(p["uri"]) + "_" + str(job_start) + "_" + str(job_duration) + ".mp4"
-                    params["source"]=p['uri']
                     params["destination"]=storage_base_dir + "/" + params["name"]
                     params["duration"]=job_duration
 
-                    t = ffmpegRunner(p['id'],params)
+                    t = ffmpegRunner(params)
                     t.start()
                     FFMPEG_THREADS.append(t)
 
-                job_dict['result']=0 if all_ok else 1
-
-            # logger.info("Posting results")
-            # logger.debug("json_response: %s" % json_response)
-            # json_ret=json.dumps(json_response)
-            # json_ret=urlencode({"argv":json_ret})
-
-            # # h = get_http_requester()
-            # resp, content = h.request(notifyJobURL, "POST", json_ret , headers=headers)
-            # logger.debug("Response: %s" % resp)
-            # logger.debug("Content: %s" % content)
 
     except Exception, e:
         logger.error("Unexpected error: %s" % str(e))
         sys.exit(-1)
 
+    j_content['result']=0
     for f in FFMPEG_THREADS:
         f.join()
-        print f.result
+        if f.ffmpeg_params['result'] != 0:
+            j_content['result']=f.ffmpeg_params['result']
+            j_content['response'][f.ffmpeg_params['job_id']]['response']=f.ffmpeg_params['result']
+    j_content['jobs'] = j_content.pop('response')
+
+    try:
+        logger.info("Posting results")
+        logger.debug("j_content: %s" % j_content)
+        json_ret=json.dumps(j_content)
+        # json_ret=urlencode({"argv":json_ret})
+
+        h = get_http_requester()
+        resp, content = h.request(notifyJobURL, "POST", json_ret , headers=headers)
+        logger.debug("Response: %s" % resp)
+        logger.debug("Content: %s" % content)
+    except Exception, e:
+        logger.error("Results can not be submitted to the server: %s" % str(e))
+        sys.exit(-1)
+
 
 
