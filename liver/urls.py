@@ -12,6 +12,9 @@ urlpatterns = patterns('liver.views',
         ( r'^api/external/get_mo_to_delete$',
         'api_external_get_mo_to_delete',
         None, "api_external_get_mo_to_delete"),
+        ( r'^api/external/get_mo$',
+        'api_external_get_mo',
+        None, "api_external_get_mo"),
 
 
 )
