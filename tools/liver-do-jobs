@@ -68,7 +68,7 @@ parser.add_option("--ssl",
 hostname = options.hostname
 print hostname
 port = options.port
-storage_base_dir = options.storage_base_dir
+storage_base_dir = os.path.abspath(options.storage_base_dir)
 token = options.token
 ssl = options.ssl
 logfile = options.logfile
