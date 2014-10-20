@@ -105,7 +105,6 @@ try:
     logger.debug("Result: %s" % j_content["result"])
 
     media_in_liver=j_content["response"]
-    print media_in_liver
 
     for f in glob.glob(storage_base_dir + "/*"):
         try:
