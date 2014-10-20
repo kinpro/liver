@@ -88,7 +88,7 @@ if ssl:
     liver_http_base="https://" + hostname + ":" + port
 logger.info("LiveR base URL: %s" % liver_http_base)
 
-getMoToDeleteURL = "%s/liver/api/external/get_mo_to_delete" % ( liver_http_base )
+getMoToDeleteURL = "%s/liver/api/external/get_mo_to_delete?token=%s" % ( liver_http_base,token )
 
 headers = {'User-Agent': 'liver-get-mo-to-delete'}
 
