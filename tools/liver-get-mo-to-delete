@@ -30,8 +30,7 @@ def get_http_requester():
 hostname = "localhost"
 port = "80"
 storage_base_dir = "/storage/videos"
-username = "user"
-password = "password"
+token = "token"
 ssl = False
 logfile = "/dev/stdout"
 loglevel = 20
@@ -42,9 +41,9 @@ loglevel = 20
 parser = OptionParser()
 parser.add_option("-H", "--hostname", 
         dest="hostname", default=hostname,
-        help="ASM hostname (default: %s)" % hostname)
+        help="LiveR hostname (default: %s)" % hostname)
 parser.add_option("-P", "--port", 
-        dest="port", help="ASM port number (default: %s)" % port, 
+        dest="port", help="LiveR port number (default: %s)" % port, 
         default=port)
 parser.add_option("-l", "--logfile",
         dest="logfile", help="Log file (default: %s)" % logfile,
@@ -52,12 +51,9 @@ parser.add_option("-l", "--logfile",
 parser.add_option("--loglevel",
         dest="loglevel", help="Log level (default: %s)" % loglevel,
         default=loglevel)
-parser.add_option("-u", "--username",
-        dest="username", help="Username to login into ASM (default: %s)" % username,
-        default=username)
-parser.add_option("-p", "--password",
-        dest="password", help="Password to login into ASM (default: %s)" % password,
-        default=password)
+parser.add_option("-t", "--token",
+        dest="token", help="Token for LiveR access (default: %s)" % token,
+        default=token)
 parser.add_option("--storagebasedir", 
         dest="storage_base_dir", help="Storage basedir (default: %s)" % storage_base_dir,
         default=storage_base_dir)
@@ -70,8 +66,7 @@ parser.add_option("--ssl",
 hostname = options.hostname
 port = options.port
 storage_base_dir = options.storage_base_dir
-username = options.username
-password = options.password
+token = options.token
 ssl = options.ssl
 logfile = options.logfile
 loglevel = options.loglevel
@@ -88,33 +83,17 @@ logger.setLevel(int(loglevel))
 
 logger.info("Default encoding: %s" % sys.getdefaultencoding())
 
-asm_http_base="http://" + hostname + ":" + port
+liver_http_base="http://" + hostname + ":" + port
 if ssl:
-    asm_http_base="https://" + hostname + ":" + port
-logger.info("ASM base URL: %s" % asm_http_base)
+    liver_http_base="https://" + hostname + ":" + port
+logger.info("LiveR base URL: %s" % liver_http_base)
 
-autentURL = "%s/api/external/login/" % ( asm_http_base )
-getMoToDeleteURL = "%s/api/external/get_mo_to_delete" % ( asm_http_base )
+getMoToDeleteURL = "%s/liver/api/external/get_mo_to_delete" % ( liver_http_base )
 
-authData = {'username': username, 'password': password}
-headers = {'User-Agent': 'asm-get-mo-to-delete'}
+headers = {'User-Agent': 'liver-get-mo-to-delete'}
 
 
 # main action ##################################################################
-
-h = get_http_requester()
-try:
-    resp, content = h.request(autentURL, "POST", urlencode(authData), headers=headers)
-except Exception, e:
-    logger.error("Error in authentication: %s " % repr(e))
-    sys.exit(-1)
-
-if resp.has_key('set-cookie'):
-    cookie=resp['set-cookie']
-    headers['Cookie'] = cookie
-else:
-    logger.error("No cookie recovered from server")
-    sys.exit(-1)
 
 try:
     h = get_http_requester()
@@ -127,10 +106,15 @@ try:
     media_to_delete=j_content["response"]
     for i in media_to_delete:
         try:
-            logger.info( "Removing %s from the hard disk" % ( os.path.join(storage_base_dir, i) ))
-            os.remove( os.path.join(storage_base_dir, i))
+            logger.info( "Removing %s from the hard disk" % ( i ))
+            if i.startswith(storage_base_dir):
+                os.remove(i)
+            else:
+                logger.warning(\
+"Skipped file. Path is not in the storage base dir: %s... <> %s " \
+                % (storage_base_dir,i))
         except Exception, e:
-            logger.error( "Failed removing %s: %s" % ( os.path.join(storage_base_dir, i), repr(e)))
+            logger.error( "Failed removing %s: %s" % ( i, repr(e)))
 
 except Exception, e:
     logger.error("Errors during response procesing for '%s' org: %s" % (org, repr(e)))
