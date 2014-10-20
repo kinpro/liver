@@ -258,11 +258,13 @@ def api_external_get_mo_to_delete(request):
         for r in records_to_delete_list:
             try:
                 profiles = json.loads(r.profiles_json)
+                logger.info("Deleting record %s" % (r))
+                logger.debug("Deleting profiles for %s : %s" % (r,r.profiles_json))
                 for p in profiles:
-                    response.append(p["file"])
+                    response.append(p["destination"])
                 r.delete()
             except Exception as e:
-                pass
+                logger.error( "Exception occurs getting profiles for %s: %s"% (r,e))
         res["response"]=response
         return json_response(res)
 
