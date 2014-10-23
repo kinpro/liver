@@ -89,7 +89,7 @@ if ssl:
     liver_http_base="https://" + hostname + ":" + port
 logger.info("LiveR base URL: %s" % liver_http_base)
 
-getMoToDeleteURL = "%s/liver/api/external/get_mo?token=%s" % ( liver_http_base,token )
+getMoURL = "%s/liver/api/external/get_mo?token=%s" % ( liver_http_base,token )
 
 headers = {'User-Agent': 'liver-mo-status'}
 
@@ -98,7 +98,7 @@ headers = {'User-Agent': 'liver-mo-status'}
 
 try:
     h = get_http_requester()
-    resp, content = h.request(getMoToDeleteURL, "GET", None , headers=headers)
+    resp, content = h.request(getMoURL, "GET", None , headers=headers)
     logger.debug("Response: %s" % resp)
     logger.debug("Content: %s" % content)
     j_content=json.loads(content)
@@ -117,7 +117,7 @@ try:
         print ("File missed for profile: %s" % f)
 
 except Exception, e:
-    logger.error("Errors during response procesing for '%s' org: %s" % (org, repr(e)))
+    logger.error("Errors during response processing: %s" % (repr(e)))
 
 
 
