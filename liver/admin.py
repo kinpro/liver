@@ -3,7 +3,6 @@ from models import *
 import logging
 logger = logging.getLogger("liver.admin")
 
-from comoda.fileclusters.admin import *
 from django import forms
 from django.contrib import admin
 from django.db.models import Q
