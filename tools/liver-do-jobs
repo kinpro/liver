@@ -183,7 +183,7 @@ while True:
                     params["job_start"]=job_start
                     params["job_duration"]=job_duration
                     params["name"]=\
-                      slugify(p["uri"]) + "_" + str(job_start) + "_" + str(job_duration) + ".mp4"
+                      slugify(unicode(p["uri"])) + "_" + str(job_start) + "_" + str(job_duration) + ".mp4"
                     params["destination"]=storage_base_dir + "/" + params["name"]
                     params["duration"]=job_duration
 

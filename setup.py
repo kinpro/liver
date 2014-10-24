@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-version = "0.0.1"
+version = "0.0.6"
 
 long_description=""
 try:
@@ -35,7 +35,7 @@ setup(
     ],
     zip_safe=False,
     install_requires=[
-        "django",
+        "django >=1.6, <1.7",
         "python-dateutil",
         "httplib2",
         "simplejson",
