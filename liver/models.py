@@ -58,7 +58,7 @@ class SourcesGroup(models.Model):
 
 class Source(models.Model):
     name = models.CharField(max_length=5000,verbose_name="Common Name")
-    external_id = models.CharField(max_length=5000,verbose_name="External Id.")
+    bitrate = models.IntegerField(verbose_name="Bitrate (bps)")
     uri = models.CharField(max_length=5000,verbose_name="URI")
 
     insertion_date = models.DateTimeField(editable=False)
@@ -289,6 +289,13 @@ class RecordJob(models.Model):
     % (self.sources_group,
        self.scheduled_start_date,
        self.scheduled_duration)
+
+    def slug(self):
+        return slugify("%s-%s-%s" \
+    % (self.sources_group,
+       self.scheduled_start_date,
+       self.scheduled_duration))
+
 
 
 

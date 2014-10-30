@@ -240,6 +240,19 @@ while True:
             j_content['response'][f.ffmpeg_params['job_id']]['response']=f.ffmpeg_params['result']
     j_content['jobs'] = j_content.pop('response')
 
+    for v in j_content['jobs'].itervalues():
+        smil = storage_base_dir + "/" + v["smil"]
+        smil_f = open(smil,"w")
+        smil_f.write("<smil><head></head><body><switch>")
+        for p in v["profiles"]:
+            smil_f.write(\
+'<video src="%(name)s" system-bitrate="%(bitrate)s"/>' % p
+            )
+        smil_f.write("</switch></body></smil>")
+        smil_f.close()
+
+    a["jobs"]["24"]["profiles"][0]['destination']
+
     try:
         logger.info("Posting results")
         logger.debug("j_content: %s" % j_content)

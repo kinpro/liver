@@ -140,6 +140,7 @@ def api_external_get_worker_jobs(request):
         job_dict["id"] = job.id
         job_dict["start"] = job.scheduled_start_timestamp
         job_dict["duration"] = job.scheduled_duration
+        job_dict["smil"] = job.slug() + ".smil"
         job_dict["profiles"] = []
 
         sg = job.sources_group
@@ -148,6 +149,7 @@ def api_external_get_worker_jobs(request):
             profile_dict = {}
             profile_dict["id"]=s.id
             profile_dict["uri"]=s.uri
+            profile_dict["bitrate"]=s.bitrate
             job_dict["profiles"].append(profile_dict)
 
         response = {}
@@ -209,6 +211,7 @@ def api_external_notify_worker_jobs_result(request):
             metadata_list.append({"start_date":str(job.scheduled_start_date)})
             metadata_list.append({"start_timestamp":job.scheduled_start_timestamp})
             metadata_list.append({"duration":job.scheduled_duration})
+            metadata_list.append({"smil":job_dict["smil"]})
 
             r.metadata_json=json.dumps(metadata_list)
             r.save()
