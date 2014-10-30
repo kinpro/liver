@@ -18,7 +18,7 @@ class SourcesGroup(models.Model):
     default_offset_end = models.IntegerField(null=True, blank=True,
             verbose_name="Default offset end (in seconds)")
     default_availability_window = models.IntegerField(null=True, blank=True,
-            verbose_name="Default availability window (in hours)")
+            verbose_name="Default licensing window (in hours)")
 
     def clone(self):
         sg = SourcesGroup()
@@ -191,7 +191,7 @@ class RecordRule(models.Model):
     offset_end = models.IntegerField(null=True, blank=True,
             verbose_name="Offset end(in seconds)")
     availability_window = models.IntegerField(null=True, blank=True,
-            verbose_name="Availability window (in hours)")
+            verbose_name="Licensing window (in hours)")
 
     def clone(self):
         rr = RecordRule()
@@ -241,7 +241,7 @@ class RecordJob(models.Model):
 
     scheduled_start_date = models.DateTimeField(null=True, blank=True)
     scheduled_duration = models.IntegerField(
-            verbose_name="Scheduled duration (in seconds)")
+            verbose_name="Duration (in seconds)")
 
     enabled = models.BooleanField(default=True)
 
