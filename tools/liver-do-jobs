@@ -30,6 +30,8 @@ def get_http_requester():
 
 DEV_NULL=open('/dev/null', "w")
 
+avconv_path="/usr/bin/"
+qtfaststart_path="/usr/bin/"
 hostname = "localhost"
 port = "80"
 storage_base_dir = "/storage/videos"
@@ -41,6 +43,12 @@ loglevel = 20
 # command line options parser ##################################################
 
 parser = OptionParser()
+parser.add_option("--qtfaststartpath", 
+        dest="qtfaststart_path", default=qtfaststart_path,
+        help="qtfaststart path (default: %s)" % qtfaststart_path)
+parser.add_option("--avconvpath", 
+        dest="avconv_path", default=avconv_path,
+        help="avconv path (default: %s)" % avconv_path)
 parser.add_option("-H", "--hostname", 
         dest="hostname", default=hostname,
         help="LiveR hostname (default: %s)" % hostname)
@@ -65,6 +73,8 @@ parser.add_option("--ssl",
         default=ssl)
 (options, args) = parser.parse_args()
 
+avconv_path = options.avconv_path
+qtfaststart_path = options.qtfaststart_path
 hostname = options.hostname
 print hostname
 port = options.port
@@ -77,7 +87,7 @@ loglevel = options.loglevel
 
 # classes ######################################################################
 
-class ffmpegRunner(Thread):
+class avconvRunner(Thread):
 
     def __init__ (self,ffmpeg_params):
         Thread.__init__(self)
@@ -86,23 +96,47 @@ class ffmpegRunner(Thread):
         self.ffmpeg_params = ffmpeg_params
 
     def run (self):
-        logger.info("starting ffmpeg thread for %s stream: %s" \
+       # /libav/bin/avconv -y -i udp://239.1.140.100:6123 -t 120  -codec copy  -bsf:a aac_adtstoasc    -map 0 /wowza/content/p99_aux.mp4 
+       # /libav/bin/avconv -y -ss 3 -i p99_aux.mp4 -codec copy -map 0 /wowza/content/p99.mp4
+
+        logger.info("starting avconv thread 1/2 for %s stream: %s" \
                 % (self.name,self.ffmpeg_params))
 
-        cmd = "/usr/bin/avconv -y -i %(uri)s -t %(duration)s -vcodec copy -acodec copy %(destination)s" % self.ffmpeg_params
+        cmd = "%(avconv_path)s/avconv -y -i %(uri)s -t %(duration)s -codec copy -bsf:a aac_adtstoasc -map 0 -f mp4 %(destination)s.tmp" % self.ffmpeg_params
+        logger.debug("cmd: %s" % cmd)
+        self.udp_cat = subprocess.Popen(cmd.split(), shell=False, bufsize=1024,
+                stdin=subprocess.PIPE, stdout=DEV_NULL,
+                stderr=DEV_NULL, close_fds=True)
+        p = self.udp_cat
+        logger.info("launched avconv for %s stream (%s)" \
+                % (self.name,str(p.pid)))
+        p.wait()
+        logger.info("ending avconv for %s stream (%s)"
+                % (self.name,str(p.pid)))
+
+        logger.info("starting avconv 2/2 thread for %s stream: %s" \
+                % (self.name,self.ffmpeg_params))
+
+        cmd = "%(avconv_path)s/avconv -y -ss 3 -i %(destination)s.tmp -codec copy  -map 0 %(destination)s" % self.ffmpeg_params
         logger.debug("cmd: %s" % cmd)
         self.ffmpeg = subprocess.Popen(cmd.split(), shell=False, bufsize=1024,
                 stdin=subprocess.PIPE, stdout=DEV_NULL,
                 stderr=DEV_NULL, close_fds=True)
         p = self.ffmpeg
-        logger.info("launched ffmpeg for %s stream (%s)" \
+        logger.info("launched avconv for %s stream (%s)" \
                 % (self.name,str(p.pid)))
         p.wait()
-        logger.info("ending ffmpeg for %s stream (%s)"
+        logger.info("ending avconv for %s stream (%s)"
                 % (self.name,str(p.pid)))
         self.ffmpeg_params["result"] = p.returncode
+        try:
+            pass
+            os.remove("%(destination)s.tmp" % self.ffmpeg_params)
+        except Exception as e:
+            pass
+            logger.error( "Error deleting tmp in %s file: %s"% (self.name,e))
 
-        cmd = "/usr/local/bin/qtfaststart %(destination)s" % self.ffmpeg_params
+        cmd = "%(qtfaststart_path)s/qtfaststart %(destination)s" % self.ffmpeg_params
         logger.debug("cmd: %s" % cmd)
         self.ffmpeg = subprocess.Popen(cmd.split(), shell=False, bufsize=1024,
                 stdin=subprocess.PIPE, stdout=DEV_NULL,
@@ -186,8 +220,10 @@ while True:
                       slugify(unicode(p["uri"])) + "_" + str(job_start) + "_" + str(job_duration) + ".mp4"
                     params["destination"]=storage_base_dir + "/" + params["name"]
                     params["duration"]=job_duration
+                    params["avconv_path"]=avconv_path
+                    params["qtfaststart_path"]=qtfaststart_path
 
-                    t = ffmpegRunner(params)
+                    t = avconvRunner(params)
                     t.start()
                     FFMPEG_THREADS.append(t)
 
