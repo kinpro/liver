@@ -58,7 +58,8 @@ class SourcesGroup(models.Model):
 
 class Source(models.Model):
     name = models.CharField(max_length=5000,verbose_name="Common Name")
-    bitrate = models.IntegerField(verbose_name="Bitrate (bps)")
+    bitrate = models.IntegerField(verbose_name="Bitrate (bps)",
+            default=1000000)
     uri = models.CharField(max_length=5000,verbose_name="URI")
 
     insertion_date = models.DateTimeField(editable=False)
