@@ -242,7 +242,7 @@ class RecordJob(models.Model):
 
     scheduled_start_date = models.DateTimeField(null=True, blank=True)
     scheduled_duration = models.IntegerField(
-            verbose_name="Duration (in seconds)")
+            verbose_name="Duration (sec.)")
 
     enabled = models.BooleanField(default=True)
 
