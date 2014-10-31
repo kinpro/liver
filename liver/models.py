@@ -58,9 +58,9 @@ class SourcesGroup(models.Model):
 
 class Source(models.Model):
     name = models.CharField(max_length=5000,verbose_name="Common Name")
+    uri = models.CharField(max_length=5000,verbose_name="URI")
     bitrate = models.IntegerField(verbose_name="Bitrate (bps)",
             default=1000000)
-    uri = models.CharField(max_length=5000,verbose_name="URI")
 
     insertion_date = models.DateTimeField(editable=False)
     modification_date = models.DateTimeField(auto_now=True,
@@ -75,7 +75,7 @@ class Source(models.Model):
                     + " (Clone %s)" % int(time.time())
         else:
             s.name = self.name + " (Clone %s)" % int(time.time())
-        s.external_id = self.external_id
+        s.bitrate = self.bitrate
         s.uri = self.uri
         s.save()
         return s
@@ -90,7 +90,7 @@ class Source(models.Model):
         return self.__unicode__()
 
     def __unicode__(self):
-        return u"%s [%s] [%s]" % (slugify(self.name), self.external_id,self.uri)
+        return u"%s [%s] [%s]" % (slugify(self.name), self.uri,self.bitrate)
 
 
 class Recorder(models.Model):
@@ -286,16 +286,18 @@ class RecordJob(models.Model):
         return self.__unicode__()
 
     def __unicode__(self):
-        return "%s [start:%s, duration:%s]" \
-    % (self.sources_group,
+        return "[%s] %s [start:%s, duration:%s]" \
+    % (self.id,
+       self.sources_group,
        self.scheduled_start_date,
        self.scheduled_duration)
 
     def slug(self):
-        return slugify("%s-%s-%s" \
+        return slugify("%s-%s-%s-%s" \
     % (self.sources_group,
        self.scheduled_start_date,
-       self.scheduled_duration))
+       self.scheduled_duration,
+       self.id))
 
 
 

@@ -212,12 +212,11 @@ while True:
                 for p in profiles:
                     # p['id']
                     # p['uri']
+                    # p['name']
                     params=p
                     params["job_id"]=job_id
                     params["job_start"]=job_start
                     params["job_duration"]=job_duration
-                    params["name"]=\
-                      slugify(unicode(p["uri"])) + "_" + str(job_start) + "_" + str(job_duration) + ".mp4"
                     params["destination"]=storage_base_dir + "/" + params["name"]
                     params["duration"]=job_duration
                     params["avconv_path"]=avconv_path
@@ -250,8 +249,6 @@ while True:
             )
         smil_f.write("</switch></body></smil>")
         smil_f.close()
-
-    a["jobs"]["24"]["profiles"][0]['destination']
 
     try:
         logger.info("Posting results")

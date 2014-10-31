@@ -110,7 +110,7 @@ class RecordJobAdmin(admin.ModelAdmin):
     )
 
     list_display = [
-      'slug',
+      '__repr__',
       'status',
       'scheduled_duration',
       'scheduled_start_date',

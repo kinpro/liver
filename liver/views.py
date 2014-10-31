@@ -150,6 +150,8 @@ def api_external_get_worker_jobs(request):
             profile_dict["id"]=s.id
             profile_dict["uri"]=s.uri
             profile_dict["bitrate"]=s.bitrate
+            profile_dict["name"]=\
+job.slug() + "_" + str(s.id) + "_" + str(s.bitrate) + ".mp4"
             job_dict["profiles"].append(profile_dict)
 
         response = {}
