@@ -70,12 +70,19 @@ class RecordJobAdmin(admin.ModelAdmin):
             clone,
     ]
 
+    date_hierarchy = 'scheduled_start_date'
+
+    list_per_page = 200
+
+    # search_fields = ['id']
+
     exclude = ["record_source"]
     readonly_fields = [
             'insertion_date',
             'modification_date',
             'execution_date',
             'completion_date',
+            'scheduled_end_date',
     ]
 
     fieldsets = (
@@ -84,6 +91,7 @@ class RecordJobAdmin(admin.ModelAdmin):
                 (
             'sources_group',
             'scheduled_start_date',
+            'scheduled_end_date',
             'scheduled_duration',
             'enabled',
                 ),
@@ -123,7 +131,7 @@ class RecordJobAdmin(admin.ModelAdmin):
     list_filter = [
             "enabled",
             "status",
-            "sources_group",
+            "record_source",
             "recorder",
     ]
 

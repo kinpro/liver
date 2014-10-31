@@ -287,11 +287,10 @@ class RecordJob(models.Model):
             _timestamp = \
 calendar.timegm(self.scheduled_start_date.astimezone(pytz.utc).utctimetuple())\
 +self.scheduled_duration
-            self.scheduled_end_date = datetime.fromtimestamp(_timestamp,pytz.UTC)
-        except Exception:
+            self.scheduled_end_date = datetime.datetime.fromtimestamp(_timestamp,pytz.UTC)
+        except Exception, e:
             pass
 
-        self.scheduled_end_date = 
         super(RecordJob, self).save(*args, **kwargs)
 
     def __repr__(self):
@@ -311,12 +310,12 @@ calendar.timegm(self.scheduled_start_date.astimezone(pytz.utc).utctimetuple())\
        self.scheduled_duration,
        self.id))
 
-    def pretty_name():
+    def pretty_name(self):
         try:
             title = self.recordjobmetadata_set.filter(key="title")[0]
         except Exception:
             title = "-"
-        return "[%s] [%s] [title:%s]" \
+        return "[%s] %s [%s]" \
     % (self.id,
        self.sources_group,
        title)
