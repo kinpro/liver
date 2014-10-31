@@ -241,6 +241,8 @@ class RecordJob(models.Model):
     completion_date = models.DateTimeField(null=True, blank=True)
 
     scheduled_start_date = models.DateTimeField(null=True, blank=True)
+    scheduled_end_date = models.DateTimeField(null=True, blank=True,
+            editable=False)
     scheduled_duration = models.IntegerField(
             verbose_name="Duration (sec.)")
 
@@ -280,6 +282,16 @@ class RecordJob(models.Model):
         if not self.insertion_date:
             d = datetime.datetime.fromtimestamp(time.time(), pytz.UTC)
             self.insertion_date = d
+
+        try:
+            _timestamp = \
+calendar.timegm(self.scheduled_start_date.astimezone(pytz.utc).utctimetuple())\
++self.scheduled_duration
+            self.scheduled_end_date = datetime.fromtimestamp(_timestamp,pytz.UTC)
+        except Exception:
+            pass
+
+        self.scheduled_end_date = 
         super(RecordJob, self).save(*args, **kwargs)
 
     def __repr__(self):
@@ -299,6 +311,15 @@ class RecordJob(models.Model):
        self.scheduled_duration,
        self.id))
 
+    def pretty_name():
+        try:
+            title = self.recordjobmetadata_set.filter(key="title")[0]
+        except Exception:
+            title = "-"
+        return "[%s] [%s] [title:%s]" \
+    % (self.id,
+       self.sources_group,
+       title)
 
 
 
