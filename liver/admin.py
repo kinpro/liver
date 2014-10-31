@@ -111,8 +111,9 @@ class RecordJobAdmin(admin.ModelAdmin):
 
     list_display = [
       'slug',
-      'scheduled_start_date',
       'status',
+      'scheduled_duration',
+      'scheduled_start_date',
       'insertion_date',
       'modification_date',
       'execution_date',
