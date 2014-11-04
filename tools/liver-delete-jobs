@@ -12,7 +12,7 @@ print sys.getdefaultencoding()
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "settings")
 
-from liver.models import RecordJob
+from liver.models import RecordingJob
 
 from optparse import OptionParser
 from datetime import datetime
@@ -28,7 +28,7 @@ parser.add_option("-k", "--keepbackdays", dest="days",
 now_seconds = int(time.time())
 seconds_of_week = int(options.days) * 24 * 60 * 60
 t=now_seconds-seconds_of_week
-objs = RecordJob.objects\
+objs = RecordingJob.objects\
         .filter(
             execution_date__lt=datetime.fromtimestamp(t,pytz.UTC))\
         .iterator()

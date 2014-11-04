@@ -14,26 +14,26 @@ def clone(modeladmin, request, queryset):
         o.clone()
 clone.short_description = _("Clone")
 
-class RecordRuleInLine(admin.TabularInline):
-        model = RecordRule
+class RecordingRuleInLine(admin.TabularInline):
+        model = RecordingRule
         extra = 1
 
-class RecordMetadataInLine(admin.TabularInline):
-        model = RecordMetadata
+class RecordingMetadataInLine(admin.TabularInline):
+        model = RecordingMetadata
         extra = 1
 
-class RecordJobMetadataInLine(admin.TabularInline):
-        model = RecordJobMetadata
+class RecordingJobMetadataInLine(admin.TabularInline):
+        model = RecordingJobMetadata
         extra = 1
 
-class RecordSourceAdmin(admin.ModelAdmin):
+class RecordingSourceAdmin(admin.ModelAdmin):
     actions = [
             clone,
     ]
 
     inlines = [
-                RecordRuleInLine,
-                RecordMetadataInLine,
+                RecordingRuleInLine,
+                RecordingMetadataInLine,
     ]
 
     list_display = [
@@ -65,7 +65,7 @@ class RecordSourceAdmin(admin.ModelAdmin):
 
 
 
-class RecordJobAdmin(admin.ModelAdmin):
+class RecordingJobAdmin(admin.ModelAdmin):
     actions = [
             clone,
     ]
@@ -76,7 +76,7 @@ class RecordJobAdmin(admin.ModelAdmin):
 
     # search_fields = ['id']
 
-    exclude = ["record_source"]
+    exclude = ["recording_source"]
     readonly_fields = [
             'insertion_date',
             'modification_date',
@@ -131,15 +131,15 @@ class RecordJobAdmin(admin.ModelAdmin):
     list_filter = [
             "enabled",
             "status",
-            "record_source",
+            "recording_source",
             "recorder",
     ]
 
     inlines = [
-        RecordJobMetadataInLine,
+        RecordingJobMetadataInLine,
     ]
 
-class RecordAdmin(admin.ModelAdmin):
+class RecordingAdmin(admin.ModelAdmin):
     ordering = ['-insertion_date']
 
     actions = [
@@ -150,7 +150,7 @@ class RecordAdmin(admin.ModelAdmin):
             'name',
             'insertion_date',
             'modification_date',
-            'record_job',
+            'recording_job',
             'profiles',
             'metadata',
     ]
@@ -192,7 +192,7 @@ class RecordAdmin(admin.ModelAdmin):
         return False
 
     def queryset(self, request):
-        qs = super(RecordAdmin, self).queryset(request)
+        qs = super(RecordingAdmin, self).queryset(request)
         return qs.filter(Q(to_delete=False))
 
 
@@ -254,7 +254,7 @@ class RecorderAdmin(admin.ModelAdmin):
 # admin.site.register(Source)
 admin.site.register(SourcesGroup,SourcesGroupAdmin)
 admin.site.register(Recorder,RecorderAdmin)
-admin.site.register(RecordSource,RecordSourceAdmin)
-admin.site.register(RecordJob,RecordJobAdmin)
-admin.site.register(Record,RecordAdmin)
+admin.site.register(RecordingSource,RecordingSourceAdmin)
+admin.site.register(RecordingJob,RecordingJobAdmin)
+admin.site.register(Recording,RecordingAdmin)
 

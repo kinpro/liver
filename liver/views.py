@@ -119,7 +119,7 @@ def api_external_get_worker_jobs(request):
         return json_response(res)
 
     try:
-        job_list = RecordJob.objects\
+        job_list = RecordingJob.objects\
                 .filter(enabled=True)\
                 .filter(status="waiting")\
                 .filter(scheduled_start_date__lte=start_before_date)\
@@ -191,7 +191,7 @@ def api_external_notify_worker_jobs_result(request):
 
     for k,job_dict in job_result_dict["jobs"].iteritems():
         try:
-            job = RecordJob.objects.get(id=job_dict["id"],
+            job = RecordingJob.objects.get(id=job_dict["id"],
                 recorder__token=request.token)
             job.completion_date = datetime.datetime.fromtimestamp(time.time(), pytz.UTC)
             job.result=job_dict["result"]
@@ -202,13 +202,13 @@ def api_external_notify_worker_jobs_result(request):
 
             job.save()
 
-            r = Record()
-            r.record_job=job
+            r = Recording()
+            r.recording_job=job
             r.recorder=job.recorder
             r.name="%(name)s-%(start)s-%(duration)s" % (job_dict)
             r.profiles_json=json.dumps(job_dict['profiles'])
             metadata_list = []
-            for m in job.recordjobmetadata_set.all():
+            for m in job.recordingjobmetadata_set.all():
                 metadata_list.append({m.key:m.value})
             metadata_list.append({"start_date":str(job.scheduled_start_date)})
             metadata_list.append({"start_timestamp":job.scheduled_start_timestamp})
@@ -256,14 +256,14 @@ def api_external_get_mo_to_delete(request):
             res["response"]=response
             return json_response(res)
 
-        records_to_delete_list = Record.objects\
+        recordings_to_delete_list = Recording.objects\
             .filter(to_delete=True).iterator()
 
         response = []
-        for r in records_to_delete_list:
+        for r in recordings_to_delete_list:
             try:
                 profiles = json.loads(r.profiles_json)
-                logger.info("Deleting record %s" % (r))
+                logger.info("Deleting recording %s" % (r))
                 logger.debug("Deleting profiles for %s : %s" % (r,r.profiles_json))
                 for p in profiles:
                     response.append(p["destination"])
@@ -300,11 +300,11 @@ def api_external_get_mo(request):
             res["response"]=response
             return json_response(res)
 
-        records_list = Record.objects\
+        recordings_list = Recording.objects\
             .filter(to_delete=False).iterator()
 
         response = []
-        for r in records_list:
+        for r in recordings_list:
             try:
                 profiles = json.loads(r.profiles_json)
                 logger.debug("Getting profiles for %s : %s" % (r,r.profiles_json))

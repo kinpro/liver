@@ -1,6 +1,6 @@
 from setuptools import setup, find_packages
 
-version = "0.0.16"
+version = "0.0.17"
 
 long_description=""
 try:
@@ -28,7 +28,7 @@ setup(
     scripts=[
         "tools/",
         "tools/liver-delete-jobs",
-        "tools/liver-delete-records",
+        "tools/liver-delete-recordings",
         "tools/liver-do-jobs",
         "tools/liver-get-mo-to-delete",
         "tools/liver-mo-status"

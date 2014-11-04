@@ -114,7 +114,7 @@ class Recorder(models.Model):
     def __unicode__(self):
         return "%s [%s]" % (self.name, self.token)
 
-class RecordSource(models.Model):
+class RecordingSource(models.Model):
     external_id = models.CharField(max_length=5000,verbose_name="External Id.",
             default = "")
     sources_group = models.ForeignKey(SourcesGroup, null=True, blank=True)
@@ -128,22 +128,22 @@ class RecordSource(models.Model):
             default = None, verbose_name="Enabled to")
 
     def clone(self):
-        rs = RecordSource()
+        rs = RecordingSource()
         rs.external_id = self.external_id
         rs.sources_group = self.sources_group
         rs.enabled = False
         rs.enabled_since = self.enabled_since
         rs.enabled_until = self.enabled_until
         rs.save()
-        rm_list = RecordMetadata.objects.filter(record_source=self)
+        rm_list = RecordingMetadata.objects.filter(recording_source=self)
         for rm in rm_list:
             rm_clone = rm.clone()
-            rm_clone.record_source=rs
+            rm_clone.recording_source=rs
             rm_clone.save()
-        rr_list = RecordRule.objects.filter(record_source=self)
+        rr_list = RecordingRule.objects.filter(recording_source=self)
         for rr in rr_list:
             rr_clone = rr.clone()
-            rr_clone.record_source=rs
+            rr_clone.recording_source=rs
             rr_clone.save()
         return rs
 
@@ -151,24 +151,24 @@ class RecordSource(models.Model):
         if not self.insertion_date:
             d = datetime.datetime.fromtimestamp(time.time(), pytz.UTC)
             self.insertion_date = d
-        super(RecordSource, self).save(*args, **kwargs)
+        super(RecordingSource, self).save(*args, **kwargs)
 
     def __repr__(self):
         return self.__unicode__()
 
     def __unicode__(self):
-        return "Record %s" % (unicode(self.sources_group))
+        return "Recording %s" % (unicode(self.sources_group))
 
 
-class RecordMetadata(models.Model):
-    record_source = models.ForeignKey(RecordSource)
+class RecordingMetadata(models.Model):
+    recording_source = models.ForeignKey(RecordingSource)
 
     key = models.CharField(max_length=5000,blank=True)
     value = models.CharField(max_length=5000,blank=True)
 
     def clone(self):
-        rm = RecordMetadata()
-        rm.record_source = self.record_source
+        rm = RecordingMetadata()
+        rm.recording_source = self.recording_source
         rm.key = self.key
         rm.value = self.value
         rm.save()
@@ -181,8 +181,8 @@ class RecordMetadata(models.Model):
         return "%s - %s" % (self.key, self.value)
 
 
-class RecordRule(models.Model):
-    record_source = models.ForeignKey(RecordSource)
+class RecordingRule(models.Model):
+    recording_source = models.ForeignKey(RecordingSource)
 
     metadata_key_filter = models.CharField(max_length=5000,blank=True)
     metadata_value_filter = models.CharField(max_length=5000,blank=True)
@@ -195,8 +195,8 @@ class RecordRule(models.Model):
             verbose_name="Licensing window (in hours)")
 
     def clone(self):
-        rr = RecordRule()
-        rr.record_source = self.record_source
+        rr = RecordingRule()
+        rr.recording_source = self.recording_source
         rr.metadata_key_filter = self.metadata_key_filter
         rr.metadata_value_filter = self.metadata_value_filter
         rr.offset_start = self.offset_start
@@ -217,9 +217,9 @@ class RecordRule(models.Model):
        self.availability_window)
 
 
-class RecordJob(models.Model):
+class RecordingJob(models.Model):
     class Meta:
-        verbose_name = _('Record job')
+        verbose_name = _('Recording job')
 
     status_choices = [
         ('waiting', _('Waiting')),
@@ -229,7 +229,7 @@ class RecordJob(models.Model):
         ('cancelled', _('Cancelled')),
     ]
 
-    record_source = models.ForeignKey(RecordSource, null=True, blank=True,
+    recording_source = models.ForeignKey(RecordingSource, null=True, blank=True,
                         on_delete=models.SET_NULL)
 
     sources_group = models.ForeignKey(SourcesGroup)
@@ -264,17 +264,17 @@ class RecordJob(models.Model):
     scheduled_start_timestamp = property(get_scheduled_start_timestamp)
 
     def clone(self):
-        rj = RecordJob()
-        rj.record_source = self.record_source
+        rj = RecordingJob()
+        rj.recording_source = self.recording_source
         rj.sources_group = self.sources_group
         rj.scheduled_start_date = self.scheduled_start_date
         rj.scheduled_duration = self.scheduled_duration
         rj.enabled = self.enabled
         rj.save()
-        rjm_list = RecordJobMetadata.objects.filter(record_job=self)
+        rjm_list = RecordingJobMetadata.objects.filter(recording_job=self)
         for rjm in rjm_list:
             rjm_clone = rjm.clone()
-            rjm_clone.record_job=rj
+            rjm_clone.recording_job=rj
             rjm_clone.save()
         return rj
 
@@ -291,7 +291,7 @@ calendar.timegm(self.scheduled_start_date.astimezone(pytz.utc).utctimetuple())\
         except Exception, e:
             pass
 
-        super(RecordJob, self).save(*args, **kwargs)
+        super(RecordingJob, self).save(*args, **kwargs)
 
     def __repr__(self):
         return self.__unicode__()
@@ -312,7 +312,7 @@ calendar.timegm(self.scheduled_start_date.astimezone(pytz.utc).utctimetuple())\
 
     def pretty_name(self):
         try:
-            title = self.recordjobmetadata_set.filter(key="title")[0]
+            title = self.recordingjobmetadata_set.filter(key="title")[0]
         except Exception:
             title = "-"
         return "[%s] %s [%s]" \
@@ -322,15 +322,15 @@ calendar.timegm(self.scheduled_start_date.astimezone(pytz.utc).utctimetuple())\
 
 
 
-class RecordJobMetadata(models.Model):
-    record_job = models.ForeignKey(RecordJob)
+class RecordingJobMetadata(models.Model):
+    recording_job = models.ForeignKey(RecordingJob)
 
     key = models.CharField(max_length=5000,blank=True)
     value = models.CharField(max_length=5000,blank=True)
 
     def clone(self):
-        rjm = RecordJobMetadata()
-        rjm.record_job = self.record_job
+        rjm = RecordingJobMetadata()
+        rjm.recording_job = self.recording_job
         rjm.key = self.key
         rjm.value = self.value
         rjm.save()
@@ -343,10 +343,10 @@ class RecordJobMetadata(models.Model):
         return "%s - %s" % (self.key, self.value)
 
 
-class Record(models.Model):
-    record_job = models.ForeignKey(RecordJob, on_delete=models.SET_NULL,
+class Recording(models.Model):
+    recording_job = models.ForeignKey(RecordingJob, on_delete=models.SET_NULL,
             null=True, blank=True,
-            verbose_name="Associated record job")
+            verbose_name="Associated recording job")
     recorder = models.ForeignKey(Recorder, on_delete=models.SET_NULL,
             null=True, blank=True,
             verbose_name="Associated recorder")
@@ -392,17 +392,17 @@ class Record(models.Model):
             self.insertion_date = d
         # TODO: Implementar la logica que decide si el flag to_delete se
         # activa o no
-        super(Record, self).save(*args, **kwargs)
+        super(Recording, self).save(*args, **kwargs)
 
     def delete(self, using=None):
         if self.to_delete:
-            return super(Record, self).delete()
+            return super(Recording, self).delete()
         else:
             self.to_delete = True
             self.save()
 
     def clone(self):
-        r = Record()
+        r = Recording()
         if self.name and self.name.find(" (Clone") >= 0:
             r.name = self.name[:self.name.find(" (Clone")] \
                     + " (Clone %s)" % int(time.time())
@@ -411,7 +411,7 @@ class Record(models.Model):
 
         r.metadata_json = self.metadata_json
         r.profiles_json = self.profiles_json
-        r.record_job = self.record_job
+        r.recording_job = self.recording_job
         r.save()
         return r
 
