@@ -251,10 +251,54 @@ class SourcesGroupAdmin(admin.ModelAdmin):
 class RecorderAdmin(admin.ModelAdmin):
     ordering = ['name','token']
 
+
+class ApplicationAdmin(admin.ModelAdmin):
+
+    readonly_fields = [
+            'id',
+            'sync_time',
+    ]
+
+    list_editable = ['name','token', 'valid', 'valid_since','valid_until']
+
+    list_display_links = ['edit_html']
+    list_display = ('name', 'token', 'description',
+            'valid', 'valid_since', 'valid_until',
+            'modification_time', "edit_html")
+    # list_filter = ['valid', 'source_host','enabled',
+    #         ]
+    search_fields = ['name', 'description','token',
+            ]
+    date_hierarchy = 'insertion_time'
+    list_per_page = 200
+
+    fieldsets = [
+            (None,{
+              'fields': [
+                ('name','token'),
+                ('valid','valid_since', 'valid_until','sync_time'),
+                (),
+            ]}),
+            ('Other info', {
+              'classes': ('collapse',),
+              'fields': (
+                ("description"),
+              )
+            }),
+    ]
+
+    def edit_html(self, queryset):
+        return '''<a href="%s/">Edit</a>''' % queryset.id
+    edit_html.short_description = ''
+    edit_html.allow_tags = True
+
+
+
 # admin.site.register(Source)
 admin.site.register(SourcesGroup,SourcesGroupAdmin)
 admin.site.register(Recorder,RecorderAdmin)
 admin.site.register(RecordingSource,RecordingSourceAdmin)
 admin.site.register(RecordingJob,RecordingJobAdmin)
 admin.site.register(Recording,RecordingAdmin)
+admin.site.register(Application,ApplicationAdmin)
 

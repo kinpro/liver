@@ -422,5 +422,38 @@ class Recording(models.Model):
         return "%s" % (self.name)
 
 
+class Application(models.Model):
+
+    class Meta:
+        verbose_name = 'External application'
+
+    name = models.CharField(max_length=250, blank=True)
+    description = models.TextField(max_length=2500, blank=True)
+
+    token = models.CharField(max_length=500, blank=True)
+
+    insertion_time = models.DateTimeField(auto_now_add=True, null=True, blank=True, db_index=True)
+    modification_time = models.DateTimeField(auto_now=True,
+            auto_now_add=True, blank=True, db_index=True, null=True)
+    valid = models.BooleanField(default=False)
+    valid_since = models.DateTimeField(null=True, blank=True, db_index=True)
+    valid_until = models.DateTimeField(null=True, blank=True, db_index=True,
+            default = None)
+    sync_time = models.DateTimeField(blank=True, db_index=True, null=True )
+
+
+    def __unicode__(self):
+        return "%s - %s" % (self.name,self.token)
+    def save(self, *args, **kwargs):
+        d = datetime.datetime.fromtimestamp(time.time(), pytz.UTC)
+        self.modification_time = d
+        if not self.insertion_time:
+            self.insertion_time = d
+        if not self.token or len(self.token) == 0:
+            self.token = str(uuid.uuid1())
+        self.token = self.token.strip()
+
+        super(Application, self).save(*args, **kwargs)
+
 
 
