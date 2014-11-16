@@ -198,6 +198,7 @@ def api_external_notify_worker_jobs_result(request):
             if job_dict['result'] != 0:
                 job.status="failed"
                 logger.error("Recording job %s %s failed" % (job.id, job))
+                job.save()
             else:
                 job.status="successful"
                 job.save()
