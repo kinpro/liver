@@ -15,6 +15,9 @@ urlpatterns = patterns('liver.views',
         ( r'^api/external/get_mo$',
         'api_external_get_mo',
         None, "api_external_get_mo"),
+        ( r'^api/external/update_recordings$',
+        'api_external_update_recordings',
+        None, "api_external_update_recordings"),
 
 
 )

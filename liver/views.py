@@ -199,6 +199,8 @@ def api_external_notify_worker_jobs_result(request):
                 job.status="successful"
             else:
                 job.status="failed"
+                logger.error("Recording job %s %s failed" % (job.id, job))
+                return
 
             job.save()
 
@@ -319,5 +321,97 @@ def api_external_get_mo(request):
       res["result"] = -9
       res["response"] = "Unexpected error: %s" % str(e)
       return json_response(res)
+
+@get_token
+@transaction.commit_on_success
+def api_external_update_recordings(request):
+    try:
+        res = {
+          "result": 0,
+          "response": ""
+        }
+
+        token = request.token
+
+        try:
+            application = Application.objects.filter(token=token)\
+                 .filter(valid=True)\
+                 .filter( Q(valid_since__lt=now_date)\
+                                        | Q(valid_since__isnull=True) ) \
+                 .filter( Q(valid_until__gt=now_date)\
+                                        | Q(valid_until__isnull=True) )[0]
+
+        except Exception:
+            logger.error("No application associated to this token: %s" % token)
+            result,response = return_error(-403)
+            res["result"]=result
+            res["response"]=response
+            return json_response(res)
+
+        submitted_updatings = request.body
+        logger.debug("update_recordings received: %s" % submitted_updatings)
+
+        try:
+            updatings = json.loads(submitted_updatings)
+        except ValueError:
+            res = {}
+            c,m = return_error (-400)
+            res["result"] = c
+            res["response"] = m
+            return json_response(res)
+
+        for u in updatings:
+            recording = None
+            if u.has_key("database_key"):
+                recording = Recording.objects.filter(\
+metadata_json__contains='{"database_key": "%s"}'%u["database_key"].strip())
+            else:
+                if u.has_key("event_id"):
+                    recording = Recording.objects.filter(\
+metadata_json__contains='{"event_id": "%s"}'%u["event_id"].strip())
+
+
+            recording_job = None
+            if u.has_key("database_key"):
+                recording_job = RecordingJobMetadata.objects.filter(\
+key="database_key",value=u["database_key"].strip())[0].recording_job
+            else:
+                if u.has_key("event_id"):
+                    recording_job = RecordingJobMetadata.objects.filter(\
+key="event_id",value=u["event_id"].strip())[0].recording_job
+
+            for k,v in u.iteritems():
+                # Updating Recording
+                try:
+                    if recording:
+                        metadatas = json.loads(recording.metadata_json)
+                        for m in metadatas:
+                            for k1,v1 in m.iteritems():
+                                if k1 == k:
+                                    m[k1] = v
+                        recording.metadata_json = json.dumps(metadatas)
+                        recording.save()
+                except Exception, e:
+                    logger.debug(\
+"Unexpected updating Recording values: %s" % e)
+
+                # Updating RecordingJobMetadata
+                try:
+                    if recording_job:
+                        r_j_m = RecordingJobMetadata.objects.filter(\
+recording_job=recording_job,key=k).update(value=v.strip())
+                except Exception, e:
+                    logger.debug(\
+"Unexpected updating RecordingJobMetadata values: %s" % e)
+
+    except Exception  as e:
+        logger.error("Unexpected exception updating recordings info: %s" % (e))
+        res = {
+            "result": -1,
+            "response": "Unexpected exception updating recordings info: %s" % (e)
+        }
+
+    return json_response(res)
+
 
 
