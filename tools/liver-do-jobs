@@ -18,7 +18,7 @@ from threading import Thread
 import ConfigParser
 import simplejson as json
 import subprocess
-
+import time
 
 
 def get_http_requester():
@@ -110,6 +110,8 @@ class avconvRunner(Thread):
         p = self.udp_cat
         logger.info("launched avconv for %s stream (%s)" \
                 % (self.name,str(p.pid)))
+        time.sleep(self.ffmpeg_params["duration"] + 5)
+        p.kill()
         p.wait()
         logger.info("ending avconv for %s stream (%s)"
                 % (self.name,str(p.pid)))
@@ -232,11 +234,12 @@ while True:
         sys.exit(-1)
 
     j_content['result']=0
+    print j_content
     for f in FFMPEG_THREADS:
         f.join()
         if f.ffmpeg_params['result'] != 0:
             j_content['result']=f.ffmpeg_params['result']
-            j_content['response'][f.ffmpeg_params['job_id']]['response']=f.ffmpeg_params['result']
+            j_content['response'][str(f.ffmpeg_params['job_id'])]['result']=f.ffmpeg_params['result']
     j_content['jobs'] = j_content.pop('response')
 
     for v in j_content['jobs'].itervalues():

@@ -195,30 +195,28 @@ def api_external_notify_worker_jobs_result(request):
                 recorder__token=request.token)
             job.completion_date = datetime.datetime.fromtimestamp(time.time(), pytz.UTC)
             job.result=job_dict["result"]
-            if job_dict['result'] == 0:
-                job.status="successful"
-            else:
+            if job_dict['result'] != 0:
                 job.status="failed"
                 logger.error("Recording job %s %s failed" % (job.id, job))
-                return
+            else:
+                job.status="successful"
+                job.save()
 
-            job.save()
+                r = Recording()
+                r.recording_job=job
+                r.recorder=job.recorder
+                r.name="%(name)s-%(start)s-%(duration)s" % (job_dict)
+                r.profiles_json=json.dumps(job_dict['profiles'])
+                metadata_list = []
+                for m in job.recordingjobmetadata_set.all():
+                    metadata_list.append({m.key:m.value})
+                metadata_list.append({"start_date":str(job.scheduled_start_date)})
+                metadata_list.append({"start_timestamp":job.scheduled_start_timestamp})
+                metadata_list.append({"duration":job.scheduled_duration})
+                metadata_list.append({"smil":job_dict["smil"]})
 
-            r = Recording()
-            r.recording_job=job
-            r.recorder=job.recorder
-            r.name="%(name)s-%(start)s-%(duration)s" % (job_dict)
-            r.profiles_json=json.dumps(job_dict['profiles'])
-            metadata_list = []
-            for m in job.recordingjobmetadata_set.all():
-                metadata_list.append({m.key:m.value})
-            metadata_list.append({"start_date":str(job.scheduled_start_date)})
-            metadata_list.append({"start_timestamp":job.scheduled_start_timestamp})
-            metadata_list.append({"duration":job.scheduled_duration})
-            metadata_list.append({"smil":job_dict["smil"]})
-
-            r.metadata_json=json.dumps(metadata_list)
-            r.save()
+                r.metadata_json=json.dumps(metadata_list)
+                r.save()
 
         except ObjectDoesNotExist:
             logger.error("Job id %s doesn't exist" % (job["id"]))
@@ -226,8 +224,6 @@ def api_external_notify_worker_jobs_result(request):
             logger.error("Multiple selectables objects with id %s" % (job["id"]))
         except Exception  as e:
             logger.error("Unexpected exception saving a job result: %s" % (e))
-
-
 
 
     res = {
