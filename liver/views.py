@@ -3,6 +3,7 @@
 from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
+from django.db.models import Q
 from django.http import HttpResponse
 from django.views.decorators.csrf import csrf_exempt
 
@@ -319,6 +320,7 @@ def api_external_get_mo(request):
       res["response"] = "Unexpected error: %s" % str(e)
       return json_response(res)
 
+@csrf_exempt
 @get_token
 @transaction.commit_on_success
 def api_external_update_recordings(request):
@@ -330,6 +332,9 @@ def api_external_update_recordings(request):
 
         token = request.token
 
+        now = int(time.time())
+        now_date = datetime.datetime.fromtimestamp(now,pytz.UTC)
+
         try:
             application = Application.objects.filter(token=token)\
                  .filter(valid=True)\
@@ -338,7 +343,8 @@ def api_external_update_recordings(request):
                  .filter( Q(valid_until__gt=now_date)\
                                         | Q(valid_until__isnull=True) )[0]
 
-        except Exception:
+        except Exception, e:
+            logger.debug("Exception getting application: %s", e)
             logger.error("No application associated to this token: %s" % token)
             result,response = return_error(-403)
             res["result"]=result
@@ -358,45 +364,57 @@ def api_external_update_recordings(request):
             return json_response(res)
 
         for u in updatings:
-            recording = None
+            logger.info("Request for updating recordings: %s" % u)
+            recordings = None
             if u.has_key("database_key"):
-                recording = Recording.objects.filter(\
+                recordings = Recording.objects.filter(\
 metadata_json__contains='{"database_key": "%s"}'%u["database_key"].strip())
             else:
                 if u.has_key("event_id"):
-                    recording = Recording.objects.filter(\
+                    recordings = Recording.objects.filter(\
 metadata_json__contains='{"event_id": "%s"}'%u["event_id"].strip())
 
-
-            recording_job = None
+            recording_jobs = []
             if u.has_key("database_key"):
-                recording_job = RecordingJobMetadata.objects.filter(\
-key="database_key",value=u["database_key"].strip())[0].recording_job
+                r_j_m_list = RecordingJobMetadata.objects.filter(\
+key="database_key",value=u["database_key"].strip()).iterator()
+                for r_j_m in r_j_m_list:
+                    recording_jobs.append(r_j_m.recording_job)
             else:
                 if u.has_key("event_id"):
-                    recording_job = RecordingJobMetadata.objects.filter(\
-key="event_id",value=u["event_id"].strip())[0].recording_job
+                    r_j_m_list = RecordingJobMetadata.objects.filter(\
+key="event_id",value=u["event_id"].strip()).iterator()
+                    for r_j_m in r_j_m_list:
+                        recording_jobs.append(r_j_m.recording_job)
 
             for k,v in u.iteritems():
                 # Updating Recording
                 try:
-                    if recording:
-                        metadatas = json.loads(recording.metadata_json)
-                        for m in metadatas:
-                            for k1,v1 in m.iteritems():
-                                if k1 == k:
-                                    m[k1] = v
-                        recording.metadata_json = json.dumps(metadatas)
-                        recording.save()
+                    if recordings:
+                        logger.info("Updating recordings")
+                        for recording in recordings:
+                            metadatas = json.loads(recording.metadata_json)
+                            for m in metadatas:
+                                for k1,v1 in m.iteritems():
+                                    if k1 == k:
+                                        logger.info(\
+"Recording %s updated. %s = %s" % (recording,k1,v))
+                                        m[k1] = v
+                            recording.metadata_json = json.dumps(metadatas)
+                            recording.save()
                 except Exception, e:
                     logger.debug(\
 "Unexpected updating Recording values: %s" % e)
 
                 # Updating RecordingJobMetadata
                 try:
-                    if recording_job:
-                        r_j_m = RecordingJobMetadata.objects.filter(\
+                    if len(recording_jobs)>0:
+                        logger.info("Updating recording_jobs")
+                        for recording_job in recording_jobs:
+                            r_j_m = RecordingJobMetadata.objects.filter(\
 recording_job=recording_job,key=k).update(value=v.strip())
+                            logger.info(\
+"RecorderJob %s updated. %s = %s" % (recording_job,k,v))
                 except Exception, e:
                     logger.debug(\
 "Unexpected updating RecordingJobMetadata values: %s" % e)
