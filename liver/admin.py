@@ -66,7 +66,7 @@ class RecordingSourceAdmin(admin.ModelAdmin):
 
 
 class RecordingJobAdmin(admin.ModelAdmin):
-    ordering = ['scheduled_start_date']
+    ordering = ['-scheduled_start_date']
 
     actions = [
             clone,
