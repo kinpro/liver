@@ -364,6 +364,7 @@ def api_external_update_recordings(request):
             return json_response(res)
 
         for u in updatings:
+            updating_problem=True
             logger.info("Request for updating recordings: %s" % u)
             recordings = None
             if u.has_key("database_key"):
@@ -402,6 +403,7 @@ key="event_id",value=u["event_id"].strip()).iterator()
                                         m[k1] = v
                             recording.metadata_json = json.dumps(metadatas)
                             recording.save()
+                            updating_problem = False
                 except Exception, e:
                     logger.debug(\
 "Unexpected updating Recording values: %s" % e)
@@ -415,9 +417,16 @@ key="event_id",value=u["event_id"].strip()).iterator()
 recording_job=recording_job,key=k).update(value=v.strip())
                             logger.info(\
 "RecorderJob %s updated. %s = %s" % (recording_job,k,v))
+                            updating_problem = False
                 except Exception, e:
                     logger.debug(\
 "Unexpected updating RecordingJobMetadata values: %s" % e)
+
+            if updating_problem:
+                res = {
+                    "result": -1,
+                    "response": "Parcial errors"
+                }
 
     except Exception  as e:
         logger.error("Unexpected exception updating recordings info: %s" % (e))
