@@ -76,7 +76,7 @@ class RecordingJobAdmin(admin.ModelAdmin):
 
     list_per_page = 200
 
-    # search_fields = ['id']
+    search_fields = ['status','recordingjobmetadata__value' ]
 
     exclude = ["recording_source"]
     readonly_fields = [
@@ -142,6 +142,8 @@ class RecordingJobAdmin(admin.ModelAdmin):
     ]
 
 class RecordingAdmin(admin.ModelAdmin):
+    search_fields = ['name', 'metadata_json', 'profiles_json']
+
     ordering = ['-insertion_date']
 
     actions = [
