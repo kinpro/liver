@@ -69,8 +69,23 @@ class RecordingJobAdmin(admin.ModelAdmin):
     ordering = ['-scheduled_start_date']
 
     actions = [
+            "wait",
+            "cancel",
+            "success",
             clone,
     ]
+
+    def wait(self, request, queryset):
+        queryset.update(status="waiting")
+    wait.short_description=_("Set to waiting")
+
+    def cancel(self, request, queryset):
+        queryset.update(status="cancelled")
+    cancel.short_description=_("Set to cancelled")
+
+    def success(self, request, queryset):
+        queryset.update(status="successful")
+    success.short_description=_("Set to successful")
 
     date_hierarchy = 'scheduled_start_date'
 
